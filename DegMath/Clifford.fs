@@ -37,7 +37,7 @@ module Clifford =
 
     let getBitFromIndex b i = b >>> (i-1) &&& 1uy
     let getIndeces b = 
-        let rec loop = fun n -> fun acc ->
+        let rec loop n acc =
             if n = 1 
                 then
                     if (getBitFromIndex b 1 = 1uy) 
@@ -87,21 +87,6 @@ module Clifford =
 
         if (p < 0 || q < 0 || n < 0) then failwith "SIGNATURE CANNOT HAVE NEGATIVE VALUES" 
         elif (size > 8) then failwith "the maximum size for a clifford algebra signature is 8" else
-       
-        let isOutOfBounds i = size < i || i < 0
-
-        let getOneVector = 
-            function 
-            | i when i |> isOutOfBounds -> failwith "NO BASIS ELEMENT AT THIS INDEX" 
-            | 0 -> 0uy
-            | i -> (1uy <<< i-1)
-
-        let getKVector = List.map (fun i -> getOneVector i) >> List.reduce (^^^)
-
-        let e (i :int list) (coefficient :float32) = 
-            match i with
-            | [] -> 0uy, coefficient
-            | _ -> getKVector i, coefficient
 
         let isUnipotent i = i <= p
 
@@ -123,7 +108,8 @@ module Clifford =
                 | [] -> 1f
                 | x -> List.reduce (*) x
 
-        let signFromSwaps (a :byte) (b :byte) = // as bitvectors are inherently sorted, you only need a single mergesort iteration to count inversions
+        // as bitvectors are already sorted, you only need a single mergesort iteration to count inversions
+        let signFromSwaps (a :byte) (b :byte) =
             let rec checkInversion (lhs :int list) (rhs :int list) (inversioncount: int) =
                 match lhs, rhs with
                 | [], _ | _ , []    
@@ -147,31 +133,35 @@ module Clifford =
 
         //XOR with 1111... flips every basis vector, getting the orthogonal complement
         let bldDual (b, mag) =
-            let rec buildBitmask acc n =
+            let rec buildRepunit acc n =
                 if n = 1
                     then (acc ||| 1uy)
                     else 
                         let ndecr = n-1
-                        buildBitmask (acc ||| (1uy <<< ndecr)) ndecr
-            let b' = (buildBitmask 0uy size) ^^^ b
+                        buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
+
+            let b' = (buildRepunit 0uy size) ^^^ b
             let sign = signFromSwaps b b'
             b', sign * mag
 
         let bldDualInv (b, mag) =
-            let rec makeRepunit acc n =
+            let rec buildRepunit acc n =
                 if n = 1
                     then (acc ||| 1uy)
                     else 
                         let ndecr = n-1
-                        makeRepunit (acc ||| (1uy <<< ndecr)) ndecr
-            let b' = (makeRepunit 0uy size) ^^^ b
+                        buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
+            let b' = (buildRepunit 0uy size) ^^^ b
             let sign = signFromSwaps b' b
             b', sign * mag
         
         let bldReverse (b, mag) = 
             match (bldGrade b) with
-            | 2 | 3 | 6 | 7 -> b, -mag
-            | _ -> b, mag
+            | 2 | 3 | 6 | 7 -> 
+                b, -mag
+
+            | _ -> 
+                b, mag
 
         let bldProduct (bld1, mag1) (bld2, mag2) =
             let bld3 = bld1 ^^^ bld2
@@ -200,7 +190,7 @@ module Clifford =
                 | [] 
                     -> cache |> List.ofSeq |> List.map (fun kvp -> kvp.Key, kvp.Value)
 
-                | (_, mag) :: tail when mag = 0f 
+                | (_, 0f) :: tail
                     -> loop cache tail
 
                 | (bl, mag) :: tail when (cache |> Map.containsKey bl)
@@ -210,11 +200,11 @@ module Clifford =
                     -> loop (cache |> Map.add bl mag) tail
             loop Map.empty m
 
-        let dual = List.map (fun (b :Blade) -> bldDual b)
+        let dual = List.map bldDual
 
-        let dualInv = List.map (fun (b :Blade) -> bldDualInv b)
+        let dualInv = List.map bldDualInv
 
-        let rev = List.map (fun (b: Blade) -> bldReverse b)
+        let rev = List.map bldReverse
 
         let gradeProject (grade: int) = 
             List.choose (fun (b :Blade) -> if (b |> fst |> bldGrade = grade) then Some b else None)
@@ -232,7 +222,6 @@ module Clifford =
                 | (h, _) :: t   -> addToSet t (Set.add (bldGrade h) set)
             addToSet m Set.empty
        
-
         //binary operators have arguments swapped so they can be used infix e.g. mul b a = a |> mul b = ab
         let add a b = simplify (a @ b)
 
@@ -240,7 +229,6 @@ module Clifford =
 
         let sub b a = add a (neg b)
 
-        //O(n*m); kinda bad
         //geometric product
         let mul b a = 
             a
