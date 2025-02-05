@@ -30,7 +30,7 @@ module Euclid2 =
 
         member this.inverse =
             match this with 
-            Transform t -> t |> PGA2.VersorInverse |> Transform
+            Transform t -> t |> PGA2.VersorInv |> Transform
 
     let identity = Transform [0uy, 1f]
 

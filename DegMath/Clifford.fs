@@ -35,104 +35,58 @@ module Clifford =
     type Blade = byte*float32
     type Multivector = Blade list
 
-    let getBitFromIndex b i = b >>> (i-1) &&& 1uy
-    let getIndeces b = 
-        let rec loop n acc =
-            if n = 1 
-                then
-                    if (getBitFromIndex b 1 = 1uy) 
-                        then 1 :: acc 
-                        else acc
-                else 
-                    if (getBitFromIndex b n = 1uy) 
-                        then loop (n - 1) (n :: acc)
-                        else loop (n - 1) (acc)
-        loop 8 []
+    let getBit (b:byte) index = b >>> (index) &&& 1uy
+    let getIndeces (b:byte) = seq {
+        for i in 0..7 do
+        if (getBit b i = 1uy) then yield i
+    }
 
     let zero = 0uy, 0f
 
-    type CliffordAlgebra =
-        {
-            Signature :int * int * int
-            Size :int
-
-            GradeOfMultivector  :Multivector -> int Set
-            GradeOfBlade        :Blade -> int
-            MagSqr              :Multivector -> float32
-            Mag                 :Multivector -> float32
-            Scale               :float32 -> Multivector -> Multivector
-            ScaleInv            :float32 -> Multivector -> Multivector
-            Normalize           :Multivector -> Multivector*float32
-
-            Dual            :Multivector -> Multivector
-            DualInv         :Multivector -> Multivector
-            Negate          :Multivector -> Multivector
-            Reverse         :Multivector -> Multivector
-            VersorInverse   :Multivector -> Multivector
-            GradeProject    :int -> Multivector -> Multivector
-
-            Add :Multivector -> Multivector -> Multivector
-            Sub :Multivector -> Multivector -> Multivector
-            Mul :Multivector -> Multivector -> Multivector
-            Dot :Multivector -> Multivector -> Multivector
-            Wdg :Multivector -> Multivector -> Multivector
-            Reg :Multivector -> Multivector -> Multivector
-
-            Project     :Multivector -> Multivector -> Multivector 
-            Sandwich    :Multivector -> Multivector -> Multivector
-        }
-
-    let Cl (p, q, n) =
+    type Cl(p, q, n) =
         let size = p+q+n
 
-        if (p < 0 || q < 0 || n < 0) then failwith "SIGNATURE CANNOT HAVE NEGATIVE VALUES" 
-        elif (size > 8) then failwith "the maximum size for a clifford algebra signature is 8" else
+        let getPotency b =
+            let rec loop acc i =
+                match getBit b i with
+                |1uy when i < p ->
+                    loop acc (i+1)
+                |1uy when i < q ->
+                    loop (acc * -1f) (i+1)
+                |1uy when i < n ->
+                    loop (acc * 0f) (i+1)
+                |0uy when i < size ->
+                    loop acc (i+1)
+                |_ -> acc
+            loop 1f 0
 
-        let isUnipotent i = i <= p
-
-        let isAntiUnipotent i = p < i && i <= p + q
-
-        let isNilpotent i = i > p+q
-
-        let getSquareOfEi = function
-            | i when (i |> isUnipotent)     -> 1f
-            | i when (i |> isAntiUnipotent) -> -1f
-            | i when (i |> isNilpotent)     -> 0f
-            | _ -> failwith "input is outside of this clifford algebra"
-
-        let signFromSquares (a :byte) (b :byte) = 
-            a &&& b
-            |> getIndeces
-            |> List.map getSquareOfEi
-            |> function
-                | [] -> 1f
-                | x -> List.reduce (*) x
+        let signFromSquares a b =
+            a &&& b |> getPotency
 
         // as bitvectors are already sorted, you only need a single mergesort iteration to count inversions
         let signFromSwaps (a :byte) (b :byte) =
-            let rec checkInversion (lhs :int list) (rhs :int list) (inversioncount: int) =
+            let rec checkInversion lhs rhs inversioncount =
                 match lhs, rhs with
                 | [], _ | _ , []    
                     -> inversioncount
 
-                | xh :: xt, yh :: yt when (xh > yh) 
-                    -> checkInversion (xh :: xt) yt (inversioncount + xt.Length + 1)
+                | x :: xs, y :: ys when (x > y) 
+                    -> checkInversion (x :: xs) ys (inversioncount + xs.Length + 1)
 
-                | _ :: xt, yh :: yt 
-                    -> checkInversion xt (yh :: yt) inversioncount
+                | _ :: xs, y :: ys 
+                    -> checkInversion xs (y :: ys) inversioncount
 
-            match (checkInversion (getIndeces a) (getIndeces b) 0) % 2 with
+            match (checkInversion (a |> getIndeces |> List.ofSeq) (b |> getIndeces |> List.ofSeq) 0) % 2 with
             | 0 -> 1f
             | 1 -> -1f
             | _ -> failwith "unexpected result from modulus operation"
 
         let sign a b = (signFromSquares a b) * (signFromSwaps a b)
 
-        let bldGrade = getIndeces >> List.length
-
-
+        let bldGrade = getIndeces >> Seq.length
+                    
         //XOR with 1111... flips every basis vector, getting the orthogonal complement
-        let bldDual (b, mag) =
+        let bldDual (bld, mag) =
             let rec buildRepunit acc n =
                 if n = 1
                     then (acc ||| 1uy)
@@ -140,28 +94,28 @@ module Clifford =
                         let ndecr = n-1
                         buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
 
-            let b' = (buildRepunit 0uy size) ^^^ b
-            let sign = signFromSwaps b b'
-            b', sign * mag
+            let bld' = (buildRepunit 0uy size) ^^^ bld
+            let sign = signFromSwaps bld bld'
+            bld', sign * mag
 
-        let bldDualInv (b, mag) =
+        let bldDualInv (bld, mag) =
             let rec buildRepunit acc n =
                 if n = 1
                     then (acc ||| 1uy)
                     else 
                         let ndecr = n-1
                         buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
-            let b' = (buildRepunit 0uy size) ^^^ b
-            let sign = signFromSwaps b' b
-            b', sign * mag
+            let bld' = (buildRepunit 0uy size) ^^^ bld
+            let sign = signFromSwaps bld' bld
+            bld', sign * mag
         
-        let bldReverse (b, mag) = 
-            match (bldGrade b) with
+        let bldReverse (bld, mag) = 
+            match (bldGrade bld) with
             | 2 | 3 | 6 | 7 -> 
-                b, -mag
+                bld, -mag
 
             | _ -> 
-                b, mag
+                bld, mag
 
         let bldProduct (bld1, mag1) (bld2, mag2) =
             let bld3 = bld1 ^^^ bld2
@@ -173,7 +127,7 @@ module Clifford =
             if areOrthogonal
                 then bldProduct (bld1, mag1)(bld2, mag2)
                 else zero
-                    
+
         let bldInner (bld1, mag1) (bld2, mag2) =
             let isSubsetOf set potentialSubset = (set ||| potentialSubset) = set
             match bld1, bld2 with
@@ -188,7 +142,7 @@ module Clifford =
             let rec loop (cache :Map<byte,float32>) (m :Multivector) =
                 match m with
                 | [] 
-                    -> cache |> List.ofSeq |> List.map (fun kvp -> kvp.Key, kvp.Value)
+                    -> cache |> Seq.map (fun kvp -> kvp.Key, kvp.Value) |> List.ofSeq
 
                 | (_, 0f) :: tail
                     -> loop cache tail
@@ -200,110 +154,77 @@ module Clifford =
                     -> loop (cache |> Map.add bl mag) tail
             loop Map.empty m
 
-        let dual = List.map bldDual
+        member _.Dual = List.map bldDual
 
-        let dualInv = List.map bldDualInv
+        member _.DualInv = List.map bldDualInv
 
-        let rev = List.map bldReverse
+        member _.Reverse = List.map bldReverse
 
-        let gradeProject (grade: int) = 
+        member _.GradeProject (grade: int) = 
             List.choose (fun (b :Blade) -> if (b |> fst |> bldGrade = grade) then Some b else None)
 
-        let getRealPart = 
+        member _.getRealPart = 
             List.choose 
                 (function | 0uy, (x :float32) -> Some x | _ -> None) 
                 >> function | x when x.Length = 0 -> 0f | x -> List.reduce (+) x
 
         //returns the grade of the multivector tupled with a flag if the vector is of pure grade
-        let grade m = 
+        member _.Grade m = 
             let rec addToSet (mv :Multivector) set =
                 match mv with
                 | []            -> set, (set.Count = 1) :int Set * bool
                 | (h, _) :: t   -> addToSet t (Set.add (bldGrade h) set)
             addToSet m Set.empty
-       
+
         //binary operators have arguments swapped so they can be used infix e.g. mul b a = a |> mul b = ab
-        let add a b = simplify (a @ b)
 
-        let neg = List.map (fun ((bl, mag) :Blade) -> bl, -mag)
+        member _.Add a b = simplify (a @ b)
 
-        let sub b a = add a (neg b)
+        member _.Neg = List.map (fun ((bl, mag) :Blade) -> bl, -mag)
+
+        member this.Sub b a = this.Add a (this.Neg b)
 
         //geometric product
-        let mul b a = 
+        member _.Mul b a = 
             a
             |> List.collect (fun blade1 -> 
                 b |> List.map(fun blade2 -> bldProduct blade1 blade2)) |> simplify
 
         //inner product
-        let dot b a = 
+        member _.Dot b a = 
             a
             |> List.collect (fun blade1 -> 
                 b |> List.map(fun blade2 -> bldInner blade1 blade2)) |> simplify
 
         //exterior product
-        let wdg b a = 
+        member _.Wdg b a = 
             a
             |> List.collect (fun blade1 -> 
                 b |> List.map(fun blade2 -> bldOuter blade1 blade2)) |> simplify
 
         //regressive product
-        let reg b a = 
+        member _.Reg b a = 
             a
             |> List.collect (fun blade1 -> 
                 b |> List.map(fun blade2 -> bldRegress blade1 blade2)) |> simplify
 
-        let magSqr m = mul m (rev m) |> getRealPart
+        member this.MagSqr m = this.Mul m (this.Reverse m) |> this.getRealPart
 
-        let mag = magSqr >> MathF.Sqrt
+        member this.Mag = this.MagSqr >> MathF.Sqrt
 
-        let scale (s: float32) (m: Multivector) = mul [0uy, s] m
+        member this.Scale (s: float32) (m: Multivector) = this.Mul [0uy, s] m
 
-        let scaleInv s m = scale (1f/s) m
+        member this.ScaleInv s m = this.Scale (1f/s) m      
 
         //returns mhat and as well as |m|
         //zero divisors can't be normalized and return the input
-        let normalize m = 
-            match mag m with
+        member this.Normalize m = 
+            match this.Mag m with
             |0f -> m, 0f
-            |s  -> scaleInv s m, s
+            |s  -> this.ScaleInv s m, s
 
-        //technically the pseudo-inverse; only works for versors
-        let inv m = m |> rev |> scaleInv (magSqr m)
+        member this.VersorInv m = m |> this.Reverse |> this.ScaleInv (this.MagSqr m)
 
-        let project b a = a |> dot b |> mul (inv b)
+        member this.Project b a = a |> this.Dot b |> this.Mul (this.VersorInv b)
 
-        let sandwich a b = a |> mul b |> mul (inv a) // RVR^-1
-
-        {
-            Signature = p,q,n
-            Size = size
-
-            GradeOfMultivector = grade >> fst
-            GradeOfBlade = fst >> bldGrade
-            MagSqr = magSqr
-            Mag = mag
-            Scale = scale
-            ScaleInv = scaleInv
-            Normalize = normalize
-
-            Negate  = neg
-            Reverse = rev
-            Dual    = dual
-            DualInv = dualInv
-
-            VersorInverse = inv
-
-            GradeProject = gradeProject
-
-            Add = add
-            Sub = sub
-
-            Mul = mul
-            Dot = dot
-            Wdg = wdg
-            Reg = reg
-
-            Project = project
-            Sandwich = sandwich
-        }
+        member this.Sandwich a b = a |> this.Mul b |> this.Mul (this.VersorInv a) // RVR^-1
