@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Vector2.fs" />
     <Compile Include="Complex.fs" />
     <Compile Include="Clifford.fs" />
     <Compile Include="Euclid2.fs" />
