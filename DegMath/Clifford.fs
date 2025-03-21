@@ -180,6 +180,12 @@ module Clifford =
                         yield f bladea bladeb
                 |]
 
+        member _.BasisVectors = Map [
+            1,  [| for i in 0..(p-1) -> 1uy <<< i |]
+            -1, [| for i in p..(q-1) -> 1uy <<< i |]
+            0,  [| for i in q..(n-1) -> 1uy <<< i |]
+        ]
+
         member _.Dual = Map.toSeq >> Seq.map bldDual >> Map.ofSeq
 
         member _.DualInv = Map.toSeq >> Seq.map bldDualInv >> Map.ofSeq
