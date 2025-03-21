@@ -48,10 +48,10 @@ module Clifford =
     open Multivector
 
     let getBit (b:byte) index = b >>> (index) &&& 1uy
-    let getIndeces (b:byte) = seq {
+    let getIndeces (b:byte) = [
         for i in 0..7 do
         if (getBit b i = 1uy) then yield i
-    }
+    ]
 
     let zero = 0uy, 0f
 
@@ -74,7 +74,7 @@ module Clifford =
 
         let signFromSquares : byte -> byte -> float32 =
             fun a b ->
-                a &&& b |> getPotency
+                getPotency(a &&& b)
 
         // as bitvectors are already sorted, you only need a single mergesort iteration to count inversions
         let signFromSwaps : byte -> byte -> float32 =
@@ -90,23 +90,23 @@ module Clifford =
                     | _ :: xs, y :: ys 
                         -> checkInversion xs (y :: ys) inversioncount
 
-                match (checkInversion (a |> getIndeces |> List.ofSeq) (b |> getIndeces |> List.ofSeq) 0) % 2 with
+                match (checkInversion (getIndeces a) (getIndeces b) 0) % 2 with
                 | 0 -> 1f
                 | 1 -> -1f
                 | _ -> failwith "unexpected result from modulus operation"
 
         let sign a b = (signFromSquares a b) * (signFromSwaps a b)
 
-        let bldGrade = getIndeces >> Seq.length
+        let bldGrade = getIndeces >> List.length
 
         //XOR with 1111... flips every basis vector, getting the orthogonal complement
         let bldDual (bld, mag) =
             let rec buildRepunit acc n =
-                if n = 1
-                    then (acc ||| 1uy)
-                    else 
-                        let ndecr = n-1
-                        buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
+                if n = 1 then 
+                    (acc ||| 1uy)
+                else 
+                    let ndecr = n-1
+                    buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
 
             let bld' = (buildRepunit 0uy size) ^^^ bld
             let sign = signFromSwaps bld bld'
@@ -114,11 +114,11 @@ module Clifford =
 
         let bldDualInv (bld, mag) =
             let rec buildRepunit acc n =
-                if n = 1
-                    then (acc ||| 1uy)
-                    else 
-                        let ndecr = n-1
-                        buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
+                if n = 1 then 
+                    (acc ||| 1uy)
+                else 
+                    let ndecr = n-1
+                    buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
             let bld' = (buildRepunit 0uy size) ^^^ bld
             let sign = signFromSwaps bld' bld
             bld', sign * mag
@@ -170,7 +170,6 @@ module Clifford =
                     |Some x, None -> key, x
                     |None, Some y -> key, y
                     |_ -> failwith "unexpected key"
-
             |]
 
         let mergeQuadratic : (Blade -> Blade -> Blade) -> Multivector -> Multivector -> Multivector =
