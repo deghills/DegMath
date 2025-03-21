@@ -33,7 +33,19 @@ open System
 module Clifford =
 
     type Blade = byte*float32
-    type Multivector = Blade list
+    
+    module private Multivector =
+        type Multivector = Map<byte, float32>
+
+        let getBlade : byte -> Multivector -> float32 =
+            fun b m ->
+                match Map.tryFind b m with
+                |Some x -> x
+                |None -> 0f
+
+        let zero = Map.empty<byte, float32>
+
+    open Multivector
 
     let getBit (b:byte) index = b >>> (index) &&& 1uy
     let getIndeces (b:byte) = seq {
@@ -51,40 +63,42 @@ module Clifford =
                 match getBit b i with
                 |1uy when i < p ->
                     loop acc (i+1)
-                |1uy when i < q ->
+                |1uy when i < p+q ->
                     loop (acc * -1f) (i+1)
-                |1uy when i < n ->
+                |1uy when i < p+q+n ->
                     loop (acc * 0f) (i+1)
                 |0uy when i < size ->
                     loop acc (i+1)
                 |_ -> acc
             loop 1f 0
 
-        let signFromSquares a b =
-            a &&& b |> getPotency
+        let signFromSquares : byte -> byte -> float32 =
+            fun a b ->
+                a &&& b |> getPotency
 
         // as bitvectors are already sorted, you only need a single mergesort iteration to count inversions
-        let signFromSwaps (a :byte) (b :byte) =
-            let rec checkInversion lhs rhs inversioncount =
-                match lhs, rhs with
-                | [], _ | _ , []    
-                    -> inversioncount
+        let signFromSwaps : byte -> byte -> float32 =
+            fun a b ->
+                let rec checkInversion lhs rhs inversioncount =
+                    match lhs, rhs with
+                    | [], _ | _ , []    
+                        -> inversioncount
 
-                | x :: xs, y :: ys when (x > y) 
-                    -> checkInversion (x :: xs) ys (inversioncount + xs.Length + 1)
+                    | x :: xs, y :: ys when (x > y) 
+                        -> checkInversion (x :: xs) ys (inversioncount + xs.Length + 1)
 
-                | _ :: xs, y :: ys 
-                    -> checkInversion xs (y :: ys) inversioncount
+                    | _ :: xs, y :: ys 
+                        -> checkInversion xs (y :: ys) inversioncount
 
-            match (checkInversion (a |> getIndeces |> List.ofSeq) (b |> getIndeces |> List.ofSeq) 0) % 2 with
-            | 0 -> 1f
-            | 1 -> -1f
-            | _ -> failwith "unexpected result from modulus operation"
+                match (checkInversion (a |> getIndeces |> List.ofSeq) (b |> getIndeces |> List.ofSeq) 0) % 2 with
+                | 0 -> 1f
+                | 1 -> -1f
+                | _ -> failwith "unexpected result from modulus operation"
 
         let sign a b = (signFromSquares a b) * (signFromSwaps a b)
 
         let bldGrade = getIndeces >> Seq.length
-                    
+
         //XOR with 1111... flips every basis vector, getting the orthogonal complement
         let bldDual (bld, mag) =
             let rec buildRepunit acc n =
@@ -138,93 +152,133 @@ module Clifford =
         let bldRegress a b = 
             bldDualInv (bldOuter (bldDual a) (bldDual b))
 
-        let simplify m = 
-            let rec loop (cache :Map<byte,float32>) (m :Multivector) =
-                match m with
-                | [] 
-                    -> cache |> Seq.map (fun kvp -> kvp.Key, kvp.Value) |> List.ofSeq
+        let simplify : Blade seq -> Multivector =
+            Seq.fold (
+                fun (m:Multivector) (bld, mag) -> 
+                    m.Add (bld, (mag + Multivector.getBlade bld m)
+                )
+            ) Multivector.zero
+            >> Map.filter (fun _ mag -> mag <> 0f)
 
-                | (_, 0f) :: tail
-                    -> loop cache tail
+        let mergeLinear f a b =
+            let allKeys = Set.union (Set <| Map.keys a) (Set <| Map.keys b)
+            Map [|
+                for key in allKeys ->
+                    let find = Map.tryFind key
+                    match find a, find b with
+                    |Some x, Some y -> key, f x y
+                    |Some x, None -> key, x
+                    |None, Some y -> key, y
+                    |_ -> failwith "unexpected key"
 
-                | (bl, mag) :: tail when (cache |> Map.containsKey bl)
-                    -> loop (cache |> Map.add bl (cache.[bl] + mag)) tail
+            |]
 
-                | (bl, mag) :: tail
-                    -> loop (cache |> Map.add bl mag) tail
-            loop Map.empty m
+        let mergeQuadratic : (Blade -> Blade -> Blade) -> Multivector -> Multivector -> Multivector =
+            fun f b a ->
+                simplify [|
+                    for KeyValue bladea in a do
+                    for KeyValue bladeb in b do
+                        yield f bladea bladeb
+                |]
 
-        member _.Dual = List.map bldDual
+        member _.Dual = Map.toSeq >> Seq.map bldDual >> Map.ofSeq
 
-        member _.DualInv = List.map bldDualInv
+        member _.DualInv = Map.toSeq >> Seq.map bldDualInv >> Map.ofSeq
 
-        member _.Reverse = List.map bldReverse
+        member _.Reverse = Map.map (
+            fun bld mag ->
+                match bldGrade bld with
+                |2 |3 |6| 7 -> -mag
+                |_ -> mag
+        )
 
-        member _.GradeProject (grade: int) = 
-            List.choose (fun (b :Blade) -> if (b |> fst |> bldGrade = grade) then Some b else None)
-
-        member _.getRealPart = 
-            List.choose 
-                (function | 0uy, (x :float32) -> Some x | _ -> None) 
-                >> function | x when x.Length = 0 -> 0f | x -> List.reduce (+) x
+        member _.GradeProject (grade: int) =
+            Map.filter (fun bld _ -> 
+                bldGrade bld = grade)                        
 
         //returns the grade of the multivector tupled with a flag if the vector is of pure grade
         member _.Grade m = 
-            let rec addToSet (mv :Multivector) set =
-                match mv with
-                | []            -> set, (set.Count = 1) :int Set * bool
-                | (h, _) :: t   -> addToSet t (Set.add (bldGrade h) set)
-            addToSet m Set.empty
+            Set <| seq {
+                for KeyValue(bld, _) in m -> bld 
+            }
+
+        member _.Neg = Map.map (fun _ mag -> -mag)
 
         //binary operators have arguments swapped so they can be used infix e.g. mul b a = a |> mul b = ab
+        ///Sum
+        member _.Add : Multivector -> Multivector -> Multivector =
+            fun b a ->
+                mergeLinear (+) a b
+        
+        ///Difference
+        member _.Sub : Multivector -> Multivector -> Multivector =
+            fun b a ->             
+                mergeLinear (-) a b
 
-        member _.Add a b = simplify (a @ b)
+        ///Geometric product
+        member _.Mul : Multivector -> Multivector -> Multivector = 
+            mergeQuadratic bldProduct
 
-        member _.Neg = List.map (fun ((bl, mag) :Blade) -> bl, -mag)
+        ///Inner product
+        member _.Dot : Multivector -> Multivector -> Multivector =
+            mergeQuadratic bldInner
 
-        member this.Sub b a = this.Add a (this.Neg b)
+        ///Outer product
+        member _.Wdg : Multivector -> Multivector -> Multivector =
+            mergeQuadratic bldOuter
 
-        //geometric product
-        member _.Mul b a = 
-            a
-            |> List.collect (fun blade1 -> 
-                b |> List.map(fun blade2 -> bldProduct blade1 blade2)) |> simplify
+        ///Regressive product
+        member _.Reg : Multivector -> Multivector -> Multivector =
+            mergeQuadratic bldRegress
 
-        //inner product
-        member _.Dot b a = 
-            a
-            |> List.collect (fun blade1 -> 
-                b |> List.map(fun blade2 -> bldInner blade1 blade2)) |> simplify
+        ///Squared magnitude
+        member this.MagSqr : Multivector -> float32 =
+            fun m -> 
+                this.Mul m (this.Reverse m) |> Multivector.getBlade 0uy
 
-        //exterior product
-        member _.Wdg b a = 
-            a
-            |> List.collect (fun blade1 -> 
-                b |> List.map(fun blade2 -> bldOuter blade1 blade2)) |> simplify
+        ///Magnitude
+        member this.Mag : Multivector -> float32 = 
+            this.MagSqr >> MathF.Sqrt
 
-        //regressive product
-        member _.Reg b a = 
-            a
-            |> List.collect (fun blade1 -> 
-                b |> List.map(fun blade2 -> bldRegress blade1 blade2)) |> simplify
+        ///Scalar multiplication
+        member this.Scale : float32 -> Multivector -> Multivector =
+            fun s m -> 
+                this.Mul Map[0uy, s] m
 
-        member this.MagSqr m = this.Mul m (this.Reverse m) |> this.getRealPart
+        ///Scalar division
+        member this.ScaleInv : float32 -> Multivector -> Multivector =
+            fun s m -> 
+                this.Scale (1f/s) m      
 
-        member this.Mag = this.MagSqr >> MathF.Sqrt
+        ///Returns mhat and as well as |m|;
+        ///Zero divisors can't be normalized and return the input
+        member this.Normalize : Multivector -> (Multivector*float32) =
+            fun m -> 
+                match this.Mag m with
+                |0f -> m, 0f
+                |s  -> this.ScaleInv s m, s
 
-        member this.Scale (s: float32) (m: Multivector) = this.Mul [0uy, s] m
+        ///Calculates the inverse of versors;
+        ///Behaviour is undefined for arbitrary multivectors
+        member this.VersorInv : Multivector -> Multivector =
+            fun m -> 
+                m 
+                |> this.Reverse 
+                |> this.ScaleInv (this.MagSqr m)
 
-        member this.ScaleInv s m = this.Scale (1f/s) m      
+        ///Project a onto b (exclude mutually orthogonal parts)
+        member this.Project : Multivector -> Multivector -> Multivector =
+            fun b a -> 
+                a 
+                |> this.Dot b 
+                |> this.Mul (this.VersorInv b)
 
-        //returns mhat and as well as |m|
-        //zero divisors can't be normalized and return the input
-        member this.Normalize m = 
-            match this.Mag m with
-            |0f -> m, 0f
-            |s  -> this.ScaleInv s m, s
-
-        member this.VersorInv m = m |> this.Reverse |> this.ScaleInv (this.MagSqr m)
-
-        member this.Project b a = a |> this.Dot b |> this.Mul (this.VersorInv b)
-
-        member this.Sandwich a b = a |> this.Mul b |> this.Mul (this.VersorInv a) // RVR^-1
+        ///Sandwich product;
+        ///First argument should be a versor;
+        ///RVR^-1
+        member this.Sandwich : Multivector -> Multivector -> Multivector =
+            fun a b -> 
+                a 
+                |> this.Mul b 
+                |> this.Mul (this.VersorInv a)
+                |> this.Neg
