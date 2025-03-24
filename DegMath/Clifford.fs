@@ -52,9 +52,9 @@ open BitvectorOperations
 module Clifford =
 
     type Blade = byte*float32
+    type Multivector = Map<byte, float32>
     
     module Multivector =
-        type Multivector = Map<byte, float32>
 
         let print : Multivector -> unit =
             fun m ->
