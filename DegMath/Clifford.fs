@@ -185,11 +185,11 @@ module Clifford =
                     for KeyValue bladeb in b do
                         yield f bladea bladeb
                 |]
-
+        
         member _.Vectors = Map [
             1,  [| for i in 0..(p-1) -> 1uy <<< i |]
-            -1, [| for i in p..(q-1) -> 1uy <<< i |]
-            0,  [| for i in q..(n-1) -> 1uy <<< i |]
+            -1, [| for i in p..(p+q-1) -> 1uy <<< i |]
+            0,  [| for i in p+q..(p+q+n-1) -> 1uy <<< i |]
         ]
 
         member this.Bivectors = 
