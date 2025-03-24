@@ -80,7 +80,10 @@ module Clifford =
     let zero = 0uy, 0f
 
     type Cl(p, q, n) =
-        let size = p+q+n
+        let size = 
+            match p+q+n with
+            |x when x > 8 -> failwith "the maximum size for a clifford algebra signature is 8"
+            |x -> x
 
         let getPotency b =
             let rec loop acc i =
@@ -191,8 +194,8 @@ module Clifford =
                     let find = Map.tryFind key
                     match find a, find b with
                     |Some x, Some y -> key, f x y
-                    |Some x, None -> key, x
-                    |None, Some y -> key, y
+                    |Some x, None -> key, f x 0f
+                    |None, Some y -> key, f 0f y
                     |_ -> failwith "unexpected key"
             |]
 
