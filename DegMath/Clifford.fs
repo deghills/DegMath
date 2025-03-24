@@ -34,11 +34,14 @@ module Clifford =
 
     type Blade = byte*float32
     
-    module private Multivector =
+    module Multivector =
         type Multivector = Map<byte, float32>
 
         let ofBlade : Blade -> Multivector =
             Seq.singleton >> Map.ofSeq
+
+        let ofBladeSeq : Blade seq -> Multivector =
+            Map.ofSeq
 
         let getBlade : byte -> Multivector -> float32 =
             fun b m ->
@@ -183,11 +186,24 @@ module Clifford =
                         yield f bladea bladeb
                 |]
 
-        member _.BasisVectors = Map [
+        member _.Vectors = Map [
             1,  [| for i in 0..(p-1) -> 1uy <<< i |]
             -1, [| for i in p..(q-1) -> 1uy <<< i |]
             0,  [| for i in q..(n-1) -> 1uy <<< i |]
         ]
+
+        member this.Bivectors = 
+            let vs = [|
+                for KeyValue (_, v) in this.Vectors do
+                    yield! v
+            |]
+            let f arr = [|
+                let length = Array.length arr
+                for i in 0..(length-1) do
+                    for j in (i+1)..(length-1) ->
+                        arr[i] ^^^ arr[j]
+            |]
+            f vs 
 
         member _.Dual = Map.toSeq >> Seq.map bldDual >> Map.ofSeq
 
