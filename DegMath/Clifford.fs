@@ -30,7 +30,7 @@ open System
     probably keep it that way.
 *)
 
-module private BitvectorOperations =
+module BitvectorOperations =
     let getBit (b:byte) index = 
         (b >>> index) &&& 1uy
 
@@ -238,11 +238,11 @@ module Clifford =
             Map.filter (fun bld _ -> 
                 bldGrade bld = grade)                        
 
-        //returns the grade of the multivector tupled with a flag if the vector is of pure grade
+        //returns the grade of the multivector
         member _.Grade m = 
-            Set <| seq {
-                for KeyValue(bld, _) in m -> bld 
-            }
+            Set [
+                for KeyValue(bld, _) in m -> bldGrade bld 
+            ]
 
         member _.Neg = Map.map (fun _ mag -> -mag)
 
