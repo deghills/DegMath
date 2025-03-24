@@ -30,6 +30,24 @@ open System
     probably keep it that way.
 *)
 
+module private BitvectorOperations =
+    let getBit (b:byte) index = 
+        (b >>> index) &&& 1uy
+
+    let byteToBitString :byte -> string =
+        fun b -> 
+            [| for i in 0..7 -> getBit b i |]
+            |> Array.map (fun i -> i.ToString()) 
+            |> Array.rev
+            |> Array.reduce (+)
+
+    let getIndeces (b:byte) = [
+        for i in 0..7 do
+        if (getBit b i = 1uy) then yield i
+    ]
+
+open BitvectorOperations
+
 module Clifford =
 
     type Blade = byte*float32
@@ -49,15 +67,11 @@ module Clifford =
                 |Some x -> x
                 |None -> 0f
 
+       
+
         let zero = Map.empty<byte, float32>
 
     open Multivector
-
-    let getBit (b:byte) index = (b >>> index) &&& 1uy
-    let getIndeces (b:byte) = [
-        for i in 0..7 do
-        if (getBit b i = 1uy) then yield i
-    ]
 
     let zero = 0uy, 0f
 
