@@ -37,6 +37,9 @@ module Clifford =
     module private Multivector =
         type Multivector = Map<byte, float32>
 
+        let ofBlade : Blade -> Multivector =
+            Seq.singleton >> Map.ofSeq
+
         let getBlade : byte -> Multivector -> float32 =
             fun b m ->
                 match Map.tryFind b m with
@@ -47,7 +50,7 @@ module Clifford =
 
     open Multivector
 
-    let getBit (b:byte) index = b >>> (index) &&& 1uy
+    let getBit (b:byte) index = (b >>> index) &&& 1uy
     let getIndeces (b:byte) = [
         for i in 0..7 do
         if (getBit b i = 1uy) then yield i
