@@ -64,7 +64,7 @@ module Clifford =
         let ofBlade : Blade -> Multivector =
             Seq.singleton >> Map.ofSeq
 
-        let ofBladeSeq : Blade seq -> Multivector =
+        let ofBlades : Blade seq -> Multivector =
             Map.ofSeq
 
         let getBlade : byte -> Multivector -> float32 =
