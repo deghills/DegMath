@@ -34,17 +34,18 @@ module private BitvectorOperations =
     let getBit (b:byte) index = 
         (b >>> index) &&& 1uy
 
-    let byteToBitString :byte -> string =
-        fun b -> 
-            [| for i in 0..7 -> getBit b i |]
-            |> Array.map (fun i -> i.ToString()) 
-            |> Array.rev
-            |> Array.reduce (+)
-
     let getIndeces (b:byte) = [
         for i in 0..7 do
         if (getBit b i = 1uy) then yield i
     ]
+
+    let byteToBitString :byte -> string =
+        fun b -> 
+            getIndeces b
+            |> List.map (fun i -> i+1)
+            |> List.map (fun i -> i.ToString())
+            |> function | [] -> ["real"] | x -> "e" :: x
+            |> List.reduce (+)
 
 open BitvectorOperations
 
@@ -54,6 +55,11 @@ module Clifford =
     
     module Multivector =
         type Multivector = Map<byte, float32>
+
+        let print : Multivector -> unit =
+            fun m ->
+                for KeyValue(bld, mag) in m do
+                    printfn $"{(byteToBitString bld, mag)}"
 
         let ofBlade : Blade -> Multivector =
             Seq.singleton >> Map.ofSeq
@@ -66,8 +72,6 @@ module Clifford =
                 match Map.tryFind b m with
                 |Some x -> x
                 |None -> 0f
-
-       
 
         let zero = Map.empty<byte, float32>
 
