@@ -61,12 +61,6 @@ module Clifford =
                 for KeyValue(bld, mag) in m do
                     printfn $"{(byteToBitString bld, mag)}"
 
-        let ofBlade : Blade -> Multivector =
-            Seq.singleton >> Map.ofSeq
-
-        let ofBlades : Blade seq -> Multivector =
-            Map.ofSeq
-
         let getBlade : byte -> Multivector -> float32 =
             fun b m ->
                 match Map.tryFind b m with

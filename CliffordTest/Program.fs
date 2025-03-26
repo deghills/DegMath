@@ -5,12 +5,6 @@ open Clifford
 let testMultivectorPrint(m:Multivector) =
     Multivector.print m
 
-let testMultivectorOfBlade =
-    Multivector.ofBlade >> Multivector.print
-
-let testMultivectorOfBlades : Blade seq -> unit =
-    Multivector.ofBlades >> Multivector.print
-
 let testGetBlade : byte -> Multivector -> unit =
     fun b m -> Multivector.getBlade b m |> Console.WriteLine
 
@@ -66,8 +60,18 @@ let testDot : (int*int*int) -> Multivector -> Multivector -> unit =
         let cl = Cl(p, q, n)
         cl.Dot a b |> Multivector.print
 
+let testWdg : (int*int*int) -> Multivector -> Multivector -> unit =
+    fun (p, q, n) a b ->
+        let cl = Cl(p, q, n)
+        cl.Wdg a b |> Multivector.print
 
-let input1 = Multivector.ofBlades [
+let testReg : (int*int*int) -> Multivector -> Multivector -> unit =
+    fun (p, q, n) a b ->
+        let cl = Cl(p, q, n)
+        cl.Reg a b |> Multivector.print
+
+
+let input1 = Multivector [
     0b10uy, 10f
     0b01uy, System.MathF.PI
     0uy, 1f
@@ -75,19 +79,9 @@ let input1 = Multivector.ofBlades [
     0b11001011uy, 69f
 ]
 
-let input2 = Multivector.ofBlades [
+let input2 = Multivector [
     0b1101uy, 111f
     0b11001011uy, 1.5f
-]
-
-let input3 = Multivector.ofBlades [
-    0b01uy, 2f
-    0b10uy, 1f
-]
-
-let input4 = Multivector.ofBlades [
-    0b01uy, 3f
-    0b11uy, 1.1f
 ]
 
 
@@ -96,7 +90,7 @@ let main _ =
     let cl = Cl(8, 0, 0)
     
     do
-        testDot (8, 0, 0) input3 input4
+        Multivector.print Multivector[3uy, 5f] 
 
 
 
