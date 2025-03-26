@@ -75,8 +75,6 @@ module Clifford =
 
         let zero = Map.empty<byte, float32>
 
-    open Multivector
-
     let zero = 0uy, 0f
 
     type Cl(p, q, n) =
@@ -197,7 +195,7 @@ module Clifford =
                     |Some x, None -> key, f x 0f
                     |None, Some y -> key, f 0f y
                     |_ -> failwith "unexpected key"
-            |]
+            |] |> Map.filter (fun _ mag -> mag <> 0f)
 
         let mergeQuadratic : (Blade -> Blade -> Blade) -> Multivector -> Multivector -> Multivector =
             fun f b a ->

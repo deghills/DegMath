@@ -56,6 +56,16 @@ let testAdd : Multivector -> Multivector -> unit =
 let testSub : Multivector -> Multivector -> unit =
     fun a b -> Cl(3, 3, 2).Sub a b |> Multivector.print
 
+let testMul : (int*int*int) -> Multivector -> Multivector -> unit =
+    fun (p, q, n) a b ->
+        let cl = Cl(p, q, n)
+        cl.Mul a b |> Multivector.print
+
+let testDot : (int*int*int) -> Multivector -> Multivector -> unit =
+    fun (p, q, n) a b ->
+        let cl = Cl(p, q, n)
+        cl.Dot a b |> Multivector.print
+
 
 let input1 = Multivector.ofBlades [
     0b10uy, 10f
@@ -70,11 +80,24 @@ let input2 = Multivector.ofBlades [
     0b11001011uy, 1.5f
 ]
 
+let input3 = Multivector.ofBlades [
+    0b01uy, 2f
+    0b10uy, 1f
+]
+
+let input4 = Multivector.ofBlades [
+    0b01uy, 3f
+    0b11uy, 1.1f
+]
+
 
 [<EntryPoint>]
 let main _ =
+    let cl = Cl(8, 0, 0)
+    
     do
-        input1 |> testSub input2
+        testDot (8, 0, 0) input3 input4
+
 
 
     0
