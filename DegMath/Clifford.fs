@@ -204,12 +204,14 @@ module Clifford =
                         yield f bladea bladeb
                 |]
         
+        ///all basis vectors in the clifford algebra, sorted by their potency
         member _.Vectors = Map [
             1,  [| for i in 0..(p-1) -> 1uy <<< i |]
             -1, [| for i in p..(p+q-1) -> 1uy <<< i |]
             0,  [| for i in p+q..(p+q+n-1) -> 1uy <<< i |]
         ]
 
+        ///all basis bivectors in the clifford algebra
         member this.Bivectors = 
             let vs = [|
                 for KeyValue (_, v) in this.Vectors do
@@ -223,10 +225,13 @@ module Clifford =
             |]
             f vs 
 
+        ///orthogonal complement
         member _.Dual = Map.toSeq >> Seq.map bldDual >> Map.ofSeq
 
+        ///Dual >> DualInv = id
         member _.DualInv = Map.toSeq >> Seq.map bldDualInv >> Map.ofSeq
 
+        ///negates all blades of grades 2, 3, 6, and 7
         member _.Reverse = Map.map (
             fun bld mag ->
                 match bldGrade bld with
@@ -234,16 +239,18 @@ module Clifford =
                 |_ -> mag
         )
 
+        ///removes every blade not of the specified grade
         member _.GradeProject (grade: int) =
             Map.filter (fun bld _ -> 
                 bldGrade bld = grade)                        
 
-        //returns the grade of the multivector
+        ///returns the grade of the multivector
         member _.Grade m = 
             Set [
                 for KeyValue(bld, _) in m -> bldGrade bld 
             ]
 
+        ///negates every component of the multivector
         member _.Neg : Multivector -> Multivector =
             Map.map (fun _ mag -> -mag)
 
