@@ -2,8 +2,8 @@
 open DegMath
 open Clifford
 
-let testMultivectorPrint(m:Multivector) =
-    Multivector.print m
+let testMultivectorPrint =
+    Multivector.print
 
 let testGetBlade : byte -> Multivector -> unit =
     fun b m -> Multivector.getBlade b m |> Console.WriteLine
@@ -70,28 +70,51 @@ let testReg : (int*int*int) -> Multivector -> Multivector -> unit =
         let cl = Cl(p, q, n)
         cl.Reg a b |> Multivector.print
 
+let testMagSqr : (int*int*int) -> Multivector -> unit =
+    fun signature ->
+        let cl = Cl signature
+        cl.MagSqr >> Console.WriteLine
+
+let testMag : (int*int*int) -> Multivector -> unit =
+    fun signature ->
+        let cl = Cl signature
+        cl.Mag >> Console.WriteLine
+
+let testNormalize : (int*int*int) -> Multivector -> unit =
+    fun signature ->
+        let cl = Cl signature
+        cl.Normalize >> fst >> Multivector.print
+
+let testVersorInv : Multivector -> unit =
+    Cl(3, 3, 2).VersorInv >> Multivector.print
+
+let testProject : (int*int*int) -> Multivector -> Multivector -> unit =
+    fun signature a b ->
+        Cl(signature).Project a b |> Multivector.print
+
+let testSandwich : (int*int*int) -> Multivector -> Multivector -> unit =
+    fun signature a b ->
+        Cl(signature).Sandwich a b |> Multivector.print
+
 
 let input1 = Multivector [
-    0b10uy, 10f
-    0b01uy, System.MathF.PI
-    0uy, 1f
-    0b11uy, -99f
-    0b11001011uy, 69f
+    0b010uy, 1f
 ]
 
 let input2 = Multivector [
-    0b1101uy, 111f
-    0b11001011uy, 1.5f
+    0b011uy, 1f
+    0b101uy, 1f
+    0b110uy, 1f
 ]
 
 
 [<EntryPoint>]
 let main _ =
-    let cl = Cl(8, 0, 0)
-    
+    let cl = (2, 0, 1)
     do
-        Multivector.print Multivector[3uy, 5f] 
+        Multivector.print input1 
+        Console.WriteLine()
 
-
+        testSandwich cl input1 input2
 
     0
