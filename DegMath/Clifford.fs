@@ -239,7 +239,8 @@ module Clifford =
                 for KeyValue(bld, _) in m -> bldGrade bld 
             ]
 
-        member _.Neg = Map.map (fun _ mag -> -mag)
+        member _.Neg : Multivector -> Multivector =
+            Map.map (fun _ mag -> -mag)
 
         //binary operators have arguments swapped so they can be used infix e.g. mul b a = a |> mul b = ab
         ///Sum
@@ -318,4 +319,3 @@ module Clifford =
                 a 
                 |> this.Mul b 
                 |> this.Mul (this.VersorInv a)
-                |> this.Neg
