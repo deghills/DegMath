@@ -55,19 +55,24 @@ module Clifford =
     type Multivector = Map<byte, float32>
     
     module Multivector =
-
-        let print : Multivector -> unit =
-            fun m ->
-                for KeyValue(bld, mag) in m do
-                    printfn $"{(byteToBitString bld, mag)}"
-
         let getBlade : byte -> Multivector -> float32 =
             fun b m ->
                 match Map.tryFind b m with
                 |Some x -> x
                 |None -> 0f
 
-        let zero = Map.empty<byte, float32>
+        let print : Multivector -> unit =
+            fun m ->
+                for KeyValue(bld, mag) in m do
+                    printfn $"{(byteToBitString bld, mag)}"
+
+        let scale : float32 -> Multivector -> Multivector = 
+            fun s -> Map.map (fun _ mag -> s * mag)
+
+        let scaleInv : float32 -> Multivector -> Multivector = 
+            fun s -> Map.map (fun _ mag -> (1f/s) * mag)
+
+        let zero = Multivector[]
 
     let zero = 0uy, 0f
 
@@ -278,23 +283,13 @@ module Clifford =
         member this.Mag : Multivector -> float32 = 
             this.MagSqr >> MathF.Sqrt
 
-        ///Scalar multiplication
-        member this.Scale : float32 -> Multivector -> Multivector =
-            fun s m -> 
-                this.Mul Map[0uy, s] m
-
-        ///Scalar division
-        member this.ScaleInv : float32 -> Multivector -> Multivector =
-            fun s m -> 
-                this.Scale (1f/s) m      
-
         ///Returns mhat and as well as |m|;
         ///Zero divisors can't be normalized and return the input
         member this.Normalize : Multivector -> (Multivector*float32) =
             fun m -> 
                 match this.Mag m with
                 |0f -> m, 0f
-                |s  -> this.ScaleInv s m, s
+                |s  -> Multivector.scaleInv s m, s
 
         ///Calculates the inverse of versors;
         ///Behaviour is undefined for arbitrary multivectors
@@ -302,7 +297,7 @@ module Clifford =
             fun m -> 
                 m 
                 |> this.Reverse 
-                |> this.ScaleInv (this.MagSqr m)
+                |> Multivector.scaleInv (this.MagSqr m)
 
         ///Project a onto b (exclude mutually orthogonal parts)
         member this.Project : Multivector -> Multivector -> Multivector =
