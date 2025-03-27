@@ -156,17 +156,18 @@ module Clifford =
         let bldRegress a b = 
             bldDualInv (bldOuter (bldDual a) (bldDual b))
 
-        let mergeLinear f a b =
-            let allKeys = Set.union (Set <| Map.keys a) (Set <| Map.keys b)
-            Map [|
-                for key in allKeys ->
-                    let find = Map.tryFind key
-                    match find a, find b with
-                    |Some x, Some y -> key, f x y
-                    |Some x, None -> key, f x 0f
-                    |None, Some y -> key, f 0f y
-                    |_ -> failwith "unexpected key"
-            |] |> Map.filter (fun _ mag -> mag <> 0f)
+        let mergeLinear : (float32 -> float32 -> float32) -> Multivector -> Multivector -> Multivector =
+            fun f a b ->
+                let allKeys = Set.union (Set <| Map.keys a) (Set <| Map.keys b)
+                Multivector [|
+                    for key in allKeys ->
+                        let find = Map.tryFind key
+                        match find a, find b with
+                        |Some x, Some y -> key, f x y
+                        |Some x, None -> key, f x 0f
+                        |None, Some y -> key, f 0f y
+                        |_ -> failwith "unexpected key"
+                |] |> Map.filter (fun _ mag -> mag <> 0f)
 
         let mergeBilinear : (Blade -> Blade -> Blade) -> Multivector -> Multivector -> Multivector =
             fun f b a ->
