@@ -82,13 +82,13 @@ module Clifford =
         ) Multivector.zero
         >> Map.filter (fun _ mag -> mag <> 0f)
 
-    let zero = 0uy, 0f
-
     type Cl(p, q, n) =
         let size = 
             match p+q+n with
             |x when x > 8 -> failwith "the maximum size for a clifford algebra signature is 8"
             |x -> x
+
+        let bldZero = 0uy, 0f
 
         let getPotency b =
             let rec loop acc i =
@@ -172,14 +172,14 @@ module Clifford =
             let areOrthogonal = (bld1 &&& bld2) = 0uy
             if areOrthogonal
                 then bldProduct (bld1, mag1)(bld2, mag2)
-                else zero
+                else bldZero
 
         let bldInner (bld1, mag1) (bld2, mag2) =
             let isSubsetOf set potentialSubset = (set ||| potentialSubset) = set
             match bld1, bld2 with
             | x, y when (x |> isSubsetOf y) -> bldProduct (x, mag1) (y, mag2) //left contraction
             | x, y when (y |> isSubsetOf x) -> bldProduct (x, mag1) (y, mag2) //right contraction
-            | _ -> zero
+            | _ -> bldZero
 
         let bldRegress a b = 
             bldDualInv (bldOuter (bldDual a) (bldDual b))
