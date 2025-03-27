@@ -70,10 +70,18 @@ module Clifford =
         let scale : float32 -> Multivector -> Multivector = 
             fun s -> Map.map (fun _ mag -> s * mag)
 
-        let scaleInv : float32 -> Multivector -> Multivector = 
+        let scaleInv : float32 -> Multivector -> Multivector =
             fun s -> Map.map (fun _ mag -> (1f/s) * mag)
 
         let zero = Multivector[]
+
+    let multivector : Blade seq -> Multivector =
+        Seq.fold (
+            fun (m:Multivector) (bld, mag) -> 
+                m.Add (bld, (mag + Multivector.getBlade bld m)
+            )
+        ) Multivector.zero
+        >> Map.filter (fun _ mag -> mag <> 0f)
 
     let zero = 0uy, 0f
 
@@ -177,14 +185,6 @@ module Clifford =
         let bldRegress a b = 
             bldDualInv (bldOuter (bldDual a) (bldDual b))
 
-        let simplify : Blade seq -> Multivector =
-            Seq.fold (
-                fun (m:Multivector) (bld, mag) -> 
-                    m.Add (bld, (mag + Multivector.getBlade bld m)
-                )
-            ) Multivector.zero
-            >> Map.filter (fun _ mag -> mag <> 0f)
-
         let mergeLinear f a b =
             let allKeys = Set.union (Set <| Map.keys a) (Set <| Map.keys b)
             Map [|
@@ -199,7 +199,7 @@ module Clifford =
 
         let mergeQuadratic : (Blade -> Blade -> Blade) -> Multivector -> Multivector -> Multivector =
             fun f b a ->
-                simplify [|
+                multivector [|
                     for KeyValue bladea in a do
                     for KeyValue bladeb in b do
                         yield f bladea bladeb

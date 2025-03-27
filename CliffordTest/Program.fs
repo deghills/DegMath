@@ -97,11 +97,11 @@ let testSandwich : (int*int*int) -> Multivector -> Multivector -> unit =
         Cl(signature).Sandwich a b |> Multivector.print
 
 
-let input1 = Multivector [
+let input1 = multivector [
     0b010uy, 1f
 ]
 
-let input2 = Multivector [
+let input2 = multivector [
     0b011uy, 1f
     0b101uy, 1f
     0b110uy, 1f
