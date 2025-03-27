@@ -54,6 +54,7 @@ module Clifford =
     type Blade = byte*float32
     type Multivector = Map<byte, float32>
     
+    [<RequireQualifiedAccess>]
     module Multivector =
         let getBlade : byte -> Multivector -> float32 =
             fun b m ->
