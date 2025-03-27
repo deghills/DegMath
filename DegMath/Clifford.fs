@@ -168,7 +168,7 @@ module Clifford =
                     |_ -> failwith "unexpected key"
             |] |> Map.filter (fun _ mag -> mag <> 0f)
 
-        let mergeQuadratic : (Blade -> Blade -> Blade) -> Multivector -> Multivector -> Multivector =
+        let mergeBilinear : (Blade -> Blade -> Blade) -> Multivector -> Multivector -> Multivector =
             fun f b a ->
                 multivector [|
                     for KeyValue bladea in a do
@@ -239,19 +239,19 @@ module Clifford =
 
         ///Geometric product
         member _.Mul : Multivector -> Multivector -> Multivector = 
-            mergeQuadratic bldProduct
+            mergeBilinear bldProduct
 
         ///Inner product
         member _.Dot : Multivector -> Multivector -> Multivector =
-            mergeQuadratic bldInner
+            mergeBilinear bldInner
 
         ///Outer product
         member _.Wdg : Multivector -> Multivector -> Multivector =
-            mergeQuadratic bldOuter
+            mergeBilinear bldOuter
 
         ///Regressive product
         member _.Reg : Multivector -> Multivector -> Multivector =
-            mergeQuadratic bldRegress
+            mergeBilinear bldRegress
 
         ///Squared magnitude
         member this.MagSqr : Multivector -> float32 =
