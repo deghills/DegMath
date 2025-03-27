@@ -103,29 +103,25 @@ module Clifford =
 
         let bldGrade = getIndeces >> List.length
 
+        let rec buildRepunit acc n =
+            if n = 1 then 
+                (acc ||| 1uy)
+            else 
+                let ndecr = n-1
+                buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
+
         //XOR with 1111... flips every basis vector, getting the orthogonal complement
-        let bldDual (bld, mag) =
-            let rec buildRepunit acc n =
-                if n = 1 then 
-                    (acc ||| 1uy)
-                else 
-                    let ndecr = n-1
-                    buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
+        let bldDual : Blade -> Blade =
+            fun (bld, mag) ->
+                let bld' = (buildRepunit 0uy size) ^^^ bld
+                let sign = signFromSwaps bld bld'
+                bld', sign * mag
 
-            let bld' = (buildRepunit 0uy size) ^^^ bld
-            let sign = signFromSwaps bld bld'
-            bld', sign * mag
-
-        let bldDualInv (bld, mag) =
-            let rec buildRepunit acc n =
-                if n = 1 then 
-                    (acc ||| 1uy)
-                else 
-                    let ndecr = n-1
-                    buildRepunit (acc ||| (1uy <<< ndecr)) ndecr
-            let bld' = (buildRepunit 0uy size) ^^^ bld
-            let sign = signFromSwaps bld' bld
-            bld', sign * mag
+        let bldDualInv : Blade -> Blade =
+            fun (bld, mag) ->
+                let bld' = (buildRepunit 0uy size) ^^^ bld
+                let sign = signFromSwaps bld' bld
+                bld', sign * mag
         
         let bldReverse (bld, mag) = 
             match (bldGrade bld) with
