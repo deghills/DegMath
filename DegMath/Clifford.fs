@@ -30,7 +30,8 @@ open System
     probably keep it that way.
 *)
 
-module BitvectorOperations =
+[<AutoOpen>]
+module private BitvectorOperations =
     let getBit (b:byte) index = 
         (b >>> index) &&& 1uy
 
@@ -46,8 +47,6 @@ module BitvectorOperations =
             |> List.map (fun i -> i.ToString())
             |> function | [] -> ["real"] | x -> "e" :: x
             |> List.reduce (+)
-
-open BitvectorOperations
 
 module Clifford =
 
