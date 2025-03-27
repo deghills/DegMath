@@ -2,34 +2,6 @@
 
 open System
 
-(*
-    Main resources I learned from:
-    
-    Youtube:
-    https://youtu.be/htYh-Tq7ZBI?feature=shared
-    https://youtu.be/60z_hpEAtD8?feature=shared
-    https://youtu.be/0i3ocLhbxJ4?feature=shared
-    https://youtu.be/2AKt6adG_OI?feature=shared
-    https://youtu.be/Idlv83CxP-8?feature=shared
-    https://youtube.com/playlist?list=PLsSPBzvBkYjxrsTOr0KLDilkZaw7UE2Vc&feature=shared
-    https://www.youtube.com/playlist?list=PLpzmRsG7u_gqaTo_vEseQ7U8KFvtiJY4K
-
-    Documentation:
-    https://bivector.net/PGADYN.html
-    https://geometry.mrao.cam.ac.uk/2016/10/geometric-algebra-2016/ (lecture 7)
-*)
-
-(*
-    Note:
-
-    Still haven't really found an elegant basis-independent implementation of exp and ln for bivectors. It's hard to
-    implement partial functions, especially as the bitvector-blade representation is essentially encoding a
-    dynamic type system, so you have to have run-time type checking/errors or just have the API allow undefined behaviour.
-    Even my implementation of the inverse makes me uncomfy as lots of multivector are non-invertible. Idk I kept meaning
-    to get around to it but have found it pretty easy to implement these functions on a case-by-case basis, so I will
-    probably keep it that way.
-*)
-
 [<AutoOpen>]
 module private BitvectorOperations =
     let getBit (b:byte) index = 
