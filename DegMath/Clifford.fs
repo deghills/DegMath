@@ -46,6 +46,7 @@ module Clifford =
 
         let zero = Multivector[]
 
+    ///A more safe constructor than Multivector: sums colliding blades and removes zeros
     let multivector : Blade seq -> Multivector =
         Seq.fold (
             fun (m:Multivector) (bld, mag) -> 
