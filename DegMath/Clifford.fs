@@ -96,8 +96,7 @@ module Clifford =
 
                 match (checkInversion (getIndeces a) (getIndeces b) 0) % 2 with
                 | 0 -> 1f
-                | 1 -> -1f
-                | _ -> failwith "unexpected result from modulus operation"
+                | _ -> -1f
 
         let sign a b = (signFromSquares a b) * (signFromSwaps a b)
 
