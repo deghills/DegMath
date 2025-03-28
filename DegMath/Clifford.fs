@@ -46,7 +46,7 @@ module Clifford =
 
         let zero = Multivector[]
 
-    ///A more safe constructor than Multivector: sums colliding blades and removes zeros
+    ///A more safe constructor than Multivector: sums colliding blades and culls insignificant values
     let multivector : Blade seq -> Multivector =
         let epsilon = 5.9604645E-08f
         Seq.fold (
