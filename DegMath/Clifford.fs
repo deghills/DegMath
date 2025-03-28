@@ -48,12 +48,13 @@ module Clifford =
 
     ///A more safe constructor than Multivector: sums colliding blades and removes zeros
     let multivector : Blade seq -> Multivector =
+        let epsilon = 5.9604645E-08f
         Seq.fold (
             fun (m:Multivector) (bld, mag) -> 
                 m.Add (bld, (mag + Multivector.getBlade bld m)
             )
         ) Multivector.zero
-        >> Map.filter (fun _ mag -> mag <> 0f)
+        >> Map.filter (fun _ mag -> (abs mag) > epsilon)
 
     type Cl(p, q, n) =
         let size = 
