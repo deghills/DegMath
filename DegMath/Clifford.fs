@@ -210,9 +210,9 @@ module Clifford =
         )
 
         ///removes every blade not of the specified grade
-        member _.GradeProject (grade: int) =
+        member _.GradeProject (grades: int Set) =
             Map.filter (fun bld _ -> 
-                bldGrade bld = grade)                        
+                grades.Contains <| bldGrade bld)                        
 
         ///returns the grade of the multivector
         member _.Grade m = 

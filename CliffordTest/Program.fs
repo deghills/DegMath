@@ -34,7 +34,7 @@ let testReverse : Multivector -> unit =
     Cl(3, 3, 2).Reverse >> Multivector.print
 
 let testGradeProject : int -> Multivector -> unit =
-    fun i m -> Cl(3, 3, 2).GradeProject i m |> Multivector.print
+    fun i m -> Cl(3, 3, 2).GradeProject Set[i] m |> Multivector.print
 
 let testGrade : Multivector -> unit =
     Cl(3, 3, 2).Grade
