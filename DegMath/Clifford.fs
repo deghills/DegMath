@@ -284,10 +284,14 @@ module Clifford =
                 |> this.Mul (this.VersorInv b)
 
         ///Sandwich product;
-        ///First argument should be a versor;
-        ///RVR^-1
         member this.Sandwich : Multivector -> Multivector -> Multivector =
             fun a b -> 
                 a 
                 |> this.Mul b 
                 |> this.Mul (this.VersorInv a)
+
+        ///Non-associativity of floating point arithmetic does respect certain identities of the sandwich product. 
+        ///SandwichVersor forces those identities to hold true in the case that the first argument is a versor.
+        member this.SandwichVersor : Multivector -> Multivector -> Multivector =
+            fun a b ->
+                this.Sandwich a b |> this.GradeProject (this.Grade b)

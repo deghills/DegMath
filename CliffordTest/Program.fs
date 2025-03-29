@@ -33,8 +33,8 @@ let testDualInv : (int*int*int) -> Multivector -> unit =
 let testReverse : Multivector -> unit =
     Cl(3, 3, 2).Reverse >> Multivector.print
 
-let testGradeProject : int -> Multivector -> unit =
-    fun i m -> Cl(3, 3, 2).GradeProject Set[i] m |> Multivector.print
+let testGradeProject : int Set -> Multivector -> unit =
+    fun is m -> Cl(3, 3, 2).GradeProject is m |> Multivector.print
 
 let testGrade : Multivector -> unit =
     Cl(3, 3, 2).Grade
@@ -98,7 +98,12 @@ let testSandwich : (int*int*int) -> Multivector -> Multivector -> unit =
 
 
 let input1 = multivector [
+    0b000uy, 1f
     0b010uy, 1f
+    0b100uy, 1f
+    0b110uy, 1f
+    0b011uy, 1f
+    0b111uy, 1f
 ]
 
 let input2 = multivector [
@@ -115,6 +120,6 @@ let main _ =
         Multivector.print input1 
         Console.WriteLine()
 
-        testSandwich cl input1 input2
+        testGradeProject Set[0; 2] input1
 
     0
