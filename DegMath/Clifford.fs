@@ -216,9 +216,7 @@ module Clifford =
 
         ///returns the grade of the multivector
         member _.Grade m = 
-            Set [
-                for KeyValue(bld, _) in m -> bldGrade bld 
-            ]
+            Set [ for KeyValue(bld, _) in m -> bldGrade bld ]
 
         ///negates every component of the multivector
         member _.Neg : Multivector -> Multivector =
@@ -260,9 +258,16 @@ module Clifford =
         member this.Mag : Multivector -> float32 = 
             this.MagSqr >> MathF.Sqrt
 
-        ///Returns mhat and as well as |m|;
+        ///m / |m|
+        member this.Normalize : Multivector -> Multivector =
+            fun m -> 
+                match this.Mag m with
+                |0f -> m
+                |s  -> Multivector.scaleInv s m
+
+        ///Returns m / |m| tupled with |m|;
         ///Zero divisors can't be normalized and return the input
-        member this.Normalize : Multivector -> (Multivector*float32) =
+        member this.NormalizeWithMag : Multivector -> (Multivector*float32) =
             fun m -> 
                 match this.Mag m with
                 |0f -> m, 0f
